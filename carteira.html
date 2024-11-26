@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carteira Boitata Coins</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #4e54c8, #8f94fb);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 15px;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+      width: 400px;
+      padding: 30px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    .balance {
+      font-size: 1.5rem;
+      margin: 20px 0;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+    .btn {
+      background: #6a11cb;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #4e54c8;
+    }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgShcIGHPCnlejcag4we0ckev_8LfxvI8",
+      authDomain: "boitatacoins.firebaseapp.com",
+      databaseURL: "https://boitatacoins-default-rtdb.firebaseio.com/",
+      projectId: "boitatacoins",
+      storageBucket: "boitatacoins.firebasestorage.app",
+      messagingSenderId: "215552103491",
+      appId: "1:215552103491:web:f2c78f73d58e88bae930f6",
+      measurementId: "G-R9SNHP0L8L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    let wallet = null;
+    let mining = false;
+
+    function createWallet(callback) {
+      crypto.subtle.digest("SHA-512", new TextEncoder().encode(Date.now().toString())).then((hash) => {
+        wallet = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        const userRef = ref(database, `wallets/${wallet}`);
+        set(userRef, { balance: 0 }).then(() => callback(wallet));
+      });
+    }
+
+    function getBalance(wallet, callback) {
+      const userRef = ref(database, `wallets/${wallet}`);
+      get(userRef).then(snapshot => {
+        if (snapshot.exists()) {
+          callback(snapshot.val().balance);
+        } else {
+          callback(0);
+        }
+      });
+    }
+
+    function updateBalance(wallet, balance) {
+      const userRef = ref(database, `wallets/${wallet}`);
+      update(userRef, { balance });
+    }
+
+    function sendCoins(fromWallet, toWallet, amount, callback) {
+      getBalance(fromWallet, (fromBalance) => {
+        if (fromBalance < amount) {
+          callback(false, "Saldo insuficiente!");
+          return;
+        }
+        getBalance(toWallet, (toBalance) => {
+          updateBalance(fromWallet, fromBalance - amount);
+          updateBalance(toWallet, toBalance + amount);
+          callback(true, "Transferência concluída com sucesso!");
+        });
+      });
+    }
+
+    function startMining(wallet) {
+      mining = true;
+      function mine() {
+        if (!mining) return;
+        const now = new Date();
+        const target = now.getMinutes();
+        const guess = Math.floor(Math.random() * 60);
+        if (guess === target) {
+          const reward = (Math.random() * 9.99 + 0.01).toFixed(2);
+          getBalance(wallet, (balance) => {
+            const newBalance = parseFloat(balance) + parseFloat(reward);
+            updateBalance(wallet, newBalance);
+            document.getElementById("balance").textContent = newBalance;
+            alert(`Parabéns! Você minerou ${reward} BTTAC!`);
+          });
+        }
+        setTimeout(mine, 100);
+      }
+      mine();
+    }
+
+    function stopMining() {
+      mining = false;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      createWallet((walletId) => {
+        document.getElementById("wallet-id").textContent = walletId;
+        getBalance(walletId, (balance) => {
+          document.getElementById("balance").textContent = balance;
+        });
+      });
+
+      document.getElementById("send-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const toWallet = document.getElementById("to-wallet").value;
+        const amount = parseFloat(document.getElementById("amount").value);
+        sendCoins(wallet, toWallet, amount, (success, message) => {
+          if (success) {
+            getBalance(wallet, (balance) => {
+              document.getElementById("balance").textContent = balance;
+            });
+          }
+          alert(message);
+        });
+      });
+
+      document.getElementById("mine").addEventListener("click", () => startMining(wallet));
+      document.getElementById("stop-mining").addEventListener("click", stopMining);
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Carteira Boitata Coins</h1>
+    <p>Carteira: <span id="wallet-id"></span></p>
+    <p class="balance">Saldo: <span id="balance"></span> BTTAC</p>
+
+    <form id="send-form">
+      <div class="form-group">
+        <label for="to-wallet">Enviar para (endereço SHA-512):</label>
+        <input type="text" id="to-wallet" placeholder="Endereço da carteira" required>
+      </div>
+      <div class="form-group">
+        <label for="amount">Quantidade (BTTAC):</label>
+        <input type="number" id="amount" placeholder="Ex.: 10.5" required>
+      </div>
+      <button type="submit" class="btn">Enviar</button>
+    </form>
+
+    <button id="mine" class="btn">Minerar</button>
+    <button id="stop-mining" class="btn">Parar</button>
+  </div>
+</body>
+  </html>
+  
