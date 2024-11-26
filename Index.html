@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criação de Conta - Boitata Coins</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #4e54c8, #8f94fb);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 15px;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+      width: 400px;
+      padding: 30px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+    .btn {
+      background: #6a11cb;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #4e54c8;
+    }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgShcIGHPCnlejcag4we0ckev_8LfxvI8",
+      authDomain: "boitatacoins.firebaseapp.com",
+      databaseURL: "https://boitatacoins-default-rtdb.firebaseio.com/",
+      projectId: "boitatacoins",
+      storageBucket: "boitatacoins.firebasestorage.app",
+      messagingSenderId: "215552103491",
+      appId: "1:215552103491:web:f2c78f73d58e88bae930f6",
+      measurementId: "G-R9SNHP0L8L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    function createWallet(callback) {
+      crypto.subtle.digest("SHA-512", new TextEncoder().encode(Date.now().toString())).then((hash) => {
+        const wallet = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        const userRef = ref(database, `wallets/${wallet}`);
+        set(userRef, { balance: 0 }).then(() => callback(wallet));
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("create-account-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        createWallet((walletId) => {
+          window.location.href = `carteira.html?wallet=${walletId}`;
+        });
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Criação de Conta - Boitata Coins</h1>
+    <form id="create-account-form">
+      <div class="form-group">
+        <label for="user-name">Nome de Usuário:</label>
+        <input type="text" id="user-name" placeholder="Digite seu nome" required>
+      </div>
+      <button type="submit" class="btn">Criar Conta</button>
+    </form>
+  </div>
+</body>
+</html>
+  
